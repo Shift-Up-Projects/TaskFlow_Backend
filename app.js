@@ -11,6 +11,9 @@ connectToDb();
 // Init App
 const app = express();
 
+// تعريف محرك العرض EJS
+app.set("view engine", "ejs");
+
 // Middlewares
 app.use(express.json());
 
@@ -22,7 +25,8 @@ app.use(
 );
 
 // Routes
-app.use("/api/test", require("./routes/testRoutes"));
+app.use("/api/users/auth", require("./routes/authRoutes"));
+app.use("/api/users", require("./routes/userRoutes"));
 
 // Error Handler Middleware
 app.use(notFound);
