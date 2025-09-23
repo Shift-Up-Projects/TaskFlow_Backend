@@ -1,7 +1,6 @@
 const nodemailer = require("nodemailer");
 const ejs = require("ejs");
 const path = require("path");
-
 const sendEmailToResetPassword = async (username, email, link) => {
   try {
     let transporter = nodemailer.createTransport({
@@ -51,8 +50,7 @@ const sendEmailToVerifyAccount = async (username, email, link) => {
     console.log("message sent successfully");
   } catch (err) {
     console.error("error", err);
-  }
-}
+  }}
 
 module.exports = {
     sendEmailToResetPassword,
