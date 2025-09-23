@@ -1,13 +1,12 @@
 const nodemailer = require("nodemailer");
 const ejs = require("ejs");
 const path = require("path");
-
 const sendEmailToResetPassword = async (username, email, link) => {
   try {
     let transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "ahmadkarbouj2004@gmail.com",
+        user: process.env.EMAIL,
         pass: process.env.PASSWORD_APP
       }
     });
@@ -33,9 +32,8 @@ const sendEmailToVerifyAccount = async (username, email, link) => {
     let transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "ahmadkarbouj2004@gmail.com",
-        pass: process.env.PASSWORD_APP
-      }
+        user: process.env.EMAIL,
+        pass: process.env.PASSWORD_APP}
     });
 
      const templatePath = path.join(__dirname, "../", "views", "verify-email.ejs");
@@ -51,8 +49,7 @@ const sendEmailToVerifyAccount = async (username, email, link) => {
     console.log("message sent successfully");
   } catch (err) {
     console.error("error", err);
-  }
-}
+  }}
 
 module.exports = {
     sendEmailToResetPassword,

@@ -22,7 +22,7 @@ const tasks=await Task.find();
 */ 
 const getTaskById = asyncHandler(
   async(req,res)=>{//callback func
-  const task= await Book.findById(req.params.id);
+  const task= await Task.findById(req.params.id);
   if(task){
   res.status(200).json(task);
 }else{
@@ -91,7 +91,7 @@ const deleteTask = asyncHandler(
   async(req,res)=>{
  
 const task=await Task.findById(req.params.id);
-if(book){
+if(task){
   await Task.findByIdAndDelete(req.params.id);
   res.status(200).json({massage: "task has been deleted"});
 }else{

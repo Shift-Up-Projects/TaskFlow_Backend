@@ -14,13 +14,13 @@ const { verifyTokenAndAdmin} = require('../middlewares/verifyToken');
 // /api/tasks
 router.route('/')
 .get(getAllTasks)
-.post(verifyTokenAndAdmin,createTask);
+.post(createTask);
 
 // /api/tasks/:id
 router.route('/:id')
 .get(getTaskById)
-.put(verifyTokenAndAdmin,updateTask)
-.delete(verifyTokenAndAdmin,deleteTask);
+.put(updateTask)
+.delete(deleteTask);
 
 // /api/tasks/status/:status
 router.route('/status/:status').get(getTasksByStatus);
@@ -28,7 +28,6 @@ router.route('/status/:status').get(getTasksByStatus);
 // /api/tasks/priority/:priority
 router.route('/priority/:priority').get(getTasksByPriority);
   
-
 
 
 

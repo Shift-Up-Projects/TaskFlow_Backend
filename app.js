@@ -27,6 +27,7 @@ app.use(
 // Routes
 app.use("/api/users/auth", require("./routes/authRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/tasks", require("./routes/taskRoutes"));
 
 // Error Handler Middleware
 app.use(notFound);
