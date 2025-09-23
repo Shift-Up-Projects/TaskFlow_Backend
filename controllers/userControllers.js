@@ -20,7 +20,7 @@ module.exports.updateUserCtrl = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     
-    const updatedUser = await User.findByIdAndUpdate(id, { username }, { new: true }).select("-password -resetPasswordToken -resetPasswordExpire -verificationToken -verificationTokenExpire");
+    const updatedUser = await User.findByIdAndUpdate(id, { $set: { username } }, { new: true }).select("-password -resetPasswordToken -resetPasswordExpire -verificationToken -verificationTokenExpire");
     return res.status(200).json({ user: updatedUser });
 });
 

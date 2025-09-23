@@ -7,7 +7,7 @@ const sendEmailToResetPassword = async (username, email, link) => {
     let transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "ahmadkarbouj2004@gmail.com",
+        user: process.env.EMAIL,
         pass: process.env.PASSWORD_APP
       }
     });
@@ -33,7 +33,7 @@ const sendEmailToVerifyAccount = async (username, email, link) => {
     let transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "ahmadkarbouj2004@gmail.com",
+        user: process.env.EMAIL,
         pass: process.env.PASSWORD_APP
       }
     });
