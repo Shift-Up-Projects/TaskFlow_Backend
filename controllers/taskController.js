@@ -46,11 +46,13 @@ const createTask = asyncHandler(
 
 const task= new Task({
 title:req.body.title,
+user_id :req.body.user_id,
 description:req.body.description,
 status:req.body.status,
 priority:req.body.priority,
 dueDate:req.body.dueDate,
- });
+startDate:req.body.startDate,
+});
 const result= await task.save();
 res.status(201).json(result);//201 => created successfully
 });
@@ -72,11 +74,13 @@ const updateTask =asyncHandler(
 const updatedTask= await Task.findByIdAndUpdate(req.params.id,{
 $set:{
 title:req.body.title,
+user_id :req.body.user_id,
 description:req.body.description,
 status:req.body.status,
 priority:req.body.priority,
 dueDate:req.body.dueDate,
-  }
+startDate:req.body.startDate,
+}
 },{new:true})
 res.status(200).json(updatedTask);
 });
