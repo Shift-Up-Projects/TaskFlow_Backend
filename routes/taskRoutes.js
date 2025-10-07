@@ -7,9 +7,13 @@ const {
      updateTask, 
      deleteTask,
      getTasksByStatus,
-     getTasksByPriority 
+     getTasksByPriority, 
+     updateTaskPriority,
+     toggleTaskStatus
     } = require('../controllers/taskController');
-const { verifyTokenAndAdmin} = require('../middlewares/verifyToken');
+const { verifyTokenAndAdmin, verifyTokenAndOnlyUser} = require('../middlewares/verifyToken');
+const validateObjectId = require("../middlewares/validateObjectId")
+
 //Http Methods /Verbs
 // /api/tasks
 router.route('/')
@@ -27,6 +31,12 @@ router.route('/status/:status').get(getTasksByStatus);
 
 // /api/tasks/priority/:priority
 router.route('/priority/:priority').get(getTasksByPriority);
+
+router.route('/priority/:id/:taskId')
+    .put(validateObjectId, verifyTokenAndOnlyUser, updateTaskPriority);
+
+router.route('/toggle-status/:id/:taskId')
+    .put(validateObjectId, verifyTokenAndOnlyUser, toggleTaskStatus);
   
 
 

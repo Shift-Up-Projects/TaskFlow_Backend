@@ -1,5 +1,5 @@
 const asyncHandler = require('express-async-handler');
-const {validateCreateTask,validateUpdateTask,Task}=require("../models/Task");
+const {validateCreateTask,validateUpdateTask,Task, validateUpdateTaskPriority}=require("../models/Task");
 /*
 @desc Get all tasks 
 @route /api/tasks
@@ -138,6 +138,58 @@ const getTasksByPriority = asyncHandler(
   }
 });
 
+/**
+ * @desc Update Task Priority
+ * @route /api/tasks/priority/:id/:taskId
+ * @method PUT
+ * @access private (only user himself)
+ */
+const updateTaskPriority = asyncHandler(async (req, res) => {
+  const { error } = validateUpdateTaskPriority(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
+  const { taskId } = req.params;
+  const { priority } = req.body;
+
+  const task = await Task.findById(taskId);
+  if (!task) {
+    return res.status(404).json({ message: "Task not found" });
+  }
+  const updatedTask = await Task.findByIdAndUpdate(taskId, {
+    $set:{
+      priority
+    }
+  }, { new: true });
+  
+  return res.status(200).json({ task: updatedTask });
+});
+
+/**
+ * @desc toggle Task Status Between 'completed' and 'in-progress'
+ * @route /api/tasks/toggle-status/:id/:taskId
+ * @method PUT
+ * @access private (only user himself)
+ */
+const toggleTaskStatus = asyncHandler(async (req, res) => {
+  const { taskId } = req.params;
+
+  const task = await Task.findById(taskId);
+  if (!task) {
+    return res.status(404).json({ message: "Task not found" });
+  }
+
+  if(task.status === 'completed') {
+    task.status = 'in-progress';
+  } else if(task.status === 'in-progress') {
+    task.status = 'completed';
+  }
+  await task.save();
+
+  return res.status(200).json({ task });
+});
+
 module.exports={
      getAllTasks,
      getTaskById,
@@ -145,5 +197,7 @@ module.exports={
      updateTask, 
      deleteTask,
      getTasksByStatus,
-     getTasksByPriority 
+     getTasksByPriority,
+     updateTaskPriority,
+     toggleTaskStatus
 };
