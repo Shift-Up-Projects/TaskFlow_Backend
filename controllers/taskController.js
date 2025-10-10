@@ -1,5 +1,5 @@
 const asyncHandler = require('express-async-handler');
-const {validateCreateTask,validateUpdateTask,Task, validateUpdateTaskPriority}=require("../models/Task");
+const {validateCreateTask,validateUpdateTask,Task}=require("../models/Task");
 /*
 @desc Get all tasks 
 @route /api/tasks
@@ -10,8 +10,42 @@ const {validateCreateTask,validateUpdateTask,Task, validateUpdateTaskPriority}=r
 const getAllTasks = asyncHandler(
   //Comparison Query Operators
   async(req,res)=>{//callback func
-const tasks=await Task.find();
-  res.status(200).json(tasks);
+try {
+    // 1️⃣ استخراج الكويريات
+    const { status, priority, user_id } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // 2️⃣ بناء فلتر ديناميكي حسب الكويريات
+    const filter = {};
+    if (status) filter.status = status;
+    if (priority) filter.priority = priority;
+    if (user_id) filter.user_id = user_id;
+
+    // 3️⃣ تنفيذ الاستعلام مع الباجينيشن
+    const [tasks, total] = await Promise.all([
+      Task.find(filter)
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 }),
+      Task.countDocuments(filter)
+    ]);
+
+    // 4️⃣ الرد
+    res.status(200).json({
+      success: true,
+      total,
+      totalPages: Math.ceil(total / limit),
+      page,
+      limit,
+      hasNextPage: page * limit < total,
+      filterUsed: filter,
+      data: tasks
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 /*
@@ -46,9 +80,9 @@ const createTask = asyncHandler(
 
 const task= new Task({
 title:req.body.title,
-user_id :req.body.user_id,
+user_id: req.user.id,
 description:req.body.description,
-status:req.body.status,
+status: "pending",
 priority:req.body.priority,
 dueDate:req.body.dueDate,
 startDate:req.body.startDate,
@@ -63,26 +97,24 @@ res.status(201).json(result);//201 => created successfully
 @metod PUT
 @access Private (only admin )
 */ 
-const updateTask =asyncHandler(
-  async(req,res)=>{
- 
-  const {error}=validateUpdateTask(req.body);
- 
-  if(error){
-  return res.status(400).json({message: error.details[0].message});//400 error from client
-}
-const updatedTask= await Task.findByIdAndUpdate(req.params.id,{
-$set:{
-title:req.body.title,
-user_id :req.body.user_id,
-description:req.body.description,
-status:req.body.status,
-priority:req.body.priority,
-dueDate:req.body.dueDate,
-startDate:req.body.startDate,
-}
-},{new:true})
-res.status(200).json(updatedTask);
+const updateTask = asyncHandler(async (req, res) => {
+  const { title, description, priority, dueDate, startDate } = req.body;
+
+  const updatedTask = await Task.findByIdAndUpdate(
+    req.params.id,
+    {
+      $set: {
+        title,
+        description,
+        priority,
+        dueDate,
+        startDate
+      },
+    },
+    { new: true }
+  );
+
+  res.status(200).json(updatedTask);
 });
 
 /*
@@ -103,92 +135,60 @@ if(task){
 }
 })
 
-//NEED TO MAKE SURE THAT THE STATUS & PRIORITY ROUTES WORKS//////
-
-/*
-@desc get Tasks By Status 
-@route /api/tasks/status/:status
-@metod GET
-@access Public
-*/ 
-const getTasksByStatus = asyncHandler(
-  async(req,res)=>{
- const task = await Task.find({ status: req.params.status });
- if (task){   
-    res.status(200).json(task);
-}else {
-    res.status(500).json({ message: error.message });
-  }
-});
 
 
-/*
-@desc get Tasks By Priority 
-@route /api/tasks/priority/:priority
-@metod GET
-@access Public
-*/ 
-const getTasksByPriority = asyncHandler(
-    async (req, res) => {
-    const tasks = await Task.find({ priority: req.params.priority });
-    if (tasks){   
-    res.status(200).json(tasks);
-}else {
-    res.status(500).json({ message: error.message });
-  }
-});
+// 🔹 دالة لتحديث أولوية المهمة
+const updateTaskPriority = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { priority } = req.body;
 
-/**
- * @desc Update Task Priority
- * @route /api/tasks/priority/:id/:taskId
- * @method PUT
- * @access private (only user himself)
- */
-const updateTaskPriority = asyncHandler(async (req, res) => {
-  const { error } = validateUpdateTaskPriority(req.body);
-  if (error) {
-    return res.status(400).json({ message: error.details[0].message });
-  }
-
-  const { taskId } = req.params;
-  const { priority } = req.body;
-
-  const task = await Task.findById(taskId);
-  if (!task) {
-    return res.status(404).json({ message: "Task not found" });
-  }
-  const updatedTask = await Task.findByIdAndUpdate(taskId, {
-    $set:{
-      priority
+    if (!priority) {
+      return res.status(400).json({ message: "Priority is required" });
     }
-  }, { new: true });
-  
-  return res.status(200).json({ task: updatedTask });
-});
 
-/**
- * @desc toggle Task Status Between 'completed' and 'in-progress'
- * @route /api/tasks/toggle-status/:id/:taskId
- * @method PUT
- * @access private (only user himself)
- */
-const toggleTaskStatus = asyncHandler(async (req, res) => {
-  const { taskId } = req.params;
+    const task = await Task.findByIdAndUpdate(
+      taskId,
+      { priority },
+      { new: true }
+    );
 
-  const task = await Task.findById(taskId);
-  if (!task) {
-    return res.status(404).json({ message: "Task not found" });
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Task priority updated successfully",
+      data: task
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
+};
 
-  if(task.status === 'completed') {
-    task.status = 'in-progress';
-  } else if(task.status === 'in-progress') {
-    task.status = 'completed';
+
+// 🔹 دالة لتبديل حالة المهمة (من pending إلى done أو العكس)
+const toggleTaskStatus = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const task = await Task.findById(taskId);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    // بدّل الحالة
+    task.status = task.status === "done" ? "pending" : "done";
+    await task.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Task status toggled successfully",
+      data: task,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
-  await task.save();
+};
 
-  return res.status(200).json({ task });
-});
 
 module.exports={
      getAllTasks,
@@ -196,8 +196,6 @@ module.exports={
      createTask,
      updateTask, 
      deleteTask,
-     getTasksByStatus,
-     getTasksByPriority,
      updateTaskPriority,
-     toggleTaskStatus
+     toggleTaskStatus 
 };
