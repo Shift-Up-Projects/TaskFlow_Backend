@@ -13,14 +13,14 @@ module.exports.updateUserCtrl = asyncHandler(async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
     const { id } = req.params;
-    const { username } = req.body;
+    const { username, fcmToken } = req.body;
 
     const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
     
-    const updatedUser = await User.findByIdAndUpdate(id, { $set: { username } }, { new: true }).select("-password -resetPasswordToken -resetPasswordExpire -verificationToken -verificationTokenExpire");
+    const updatedUser = await User.findByIdAndUpdate(id, { $set: { username, fcmToken } }, { new: true }).select("-password -resetPasswordToken -resetPasswordExpire -verificationToken -verificationTokenExpire");
     return res.status(200).json({ user: updatedUser });
 });
 

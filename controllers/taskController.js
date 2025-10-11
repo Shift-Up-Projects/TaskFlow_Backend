@@ -1,5 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const {validateCreateTask,validateUpdateTask,Task, validateUpdateTaskPriority}=require("../models/Task");
+const { User } = require('../models/User');
+const { createAndSendMessageNotification } = require('../utils/firebaseNotification');
 /*
 @desc Get all tasks 
 @route /api/tasks
@@ -54,6 +56,16 @@ dueDate:req.body.dueDate,
 startDate:req.body.startDate,
 });
 const result= await task.save();
+
+  const user = await User.findById(result.user_id);
+
+  const createdForUser = user._id;
+  const title = "New Task Created";
+  const refType = "Task";
+  const refId = result._id;
+  const body = `${user.username}, You must work hard to reach your goal, let's go to complete your task.`;
+  createAndSendMessageNotification(createdForUser, refType, refId, title, body);
+
 res.status(201).json(result);//201 => created successfully
 });
 

@@ -1,5 +1,3 @@
-const cron = require("node-cron");
-const { required, ref } = require("joi");
 const mongoose=require("mongoose");
 const Joi = require('joi');
 //Task Schema
@@ -47,9 +45,6 @@ startDate:{
 
 const Task=mongoose.model("Task",TaskSchema);
 
-
-
-
 //Validate Create Task
 function validateCreateTask(obj){
 const schema=Joi.object({
@@ -88,31 +83,4 @@ return schema.validate(obj);
 
 }
 
-
-
-cron.schedule("*/5 * * * *", async () => { // كل 5 دقائق
-  const startTime = Date.now();
-  const currentDate = new Date();
-
-  try {
-    console.log(`[CRON] Task update started at ${new Date().toISOString()}`);
-
-    await Task.updateMany(
-      { startDate: { $lte: currentDate }, status: 'pending' },
-      { $set: { status: 'in-progress' } }
-    );
-
-    await Task.updateMany(
-      { dueDate: { $lt: currentDate }, status: 'in-progress' },
-      { $set: { status: 'not-completed' } }
-    );
-
-    const endTime = Date.now();
-    console.log(`[CRON] Task update finished in ${endTime - startTime}ms`);
-  } catch (error) {
-    console.error("[CRON] Error in tasks update", error);
-  }
-});
-
 module.exports={Task,validateCreateTask,validateUpdateTask, validateUpdateTaskPriority};
-

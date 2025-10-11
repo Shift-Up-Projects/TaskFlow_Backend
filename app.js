@@ -8,6 +8,8 @@ const colors = require("colors");
 // Connection To Db
 connectToDb();
 
+require('./utils/crons');
+
 // Init App
 const app = express();
 
@@ -28,6 +30,7 @@ app.use(
 app.use("/api/users/auth", require("./routes/authRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/tasks", require("./routes/taskRoutes"));
+app.use("/api/notifications", require("./routes/notificationRoutes"));
 
 // Error Handler Middleware
 app.use(notFound);

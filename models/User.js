@@ -48,6 +48,10 @@ const UserSchema = new mongoose.Schema(
       enum: ["user"],
       default: "user",
     },
+    fcmToken: {
+      type: String,
+      default: null,
+    }
   },
   {
     timestamps: true,
@@ -64,6 +68,18 @@ UserSchema.methods.generateToken = function () {
   );
 };
 
+UserSchema.virtual("tasks", {
+  ref: "Task",
+  foreignField: "user_id",
+  localField: "_id",
+});
+
+UserSchema.virtual("notifications", {
+  ref: "Notification",
+  foreignField: "createdForUser",
+  localField: "_id",
+});
+
 const User = mongoose.model("User", UserSchema);
 
 const validateRegisterUser = (obj) => {
@@ -71,6 +87,7 @@ const validateRegisterUser = (obj) => {
     username: Joi.string().trim().min(2).max(100).required(),
     email: Joi.string().trim().email().required(),
     password: Joi.string().trim().min(6).required(),
+    fcmToken: Joi.string(),
   });
 
   return schema.validate(obj);
@@ -87,6 +104,7 @@ const vlidateLoginUser = (obj) => {
 const validateUpdateUser = (obj) => {
   const schema = Joi.object({
     username: Joi.string().trim().min(2).max(100),
+    fcmToken: Joi.string(),
   }); 
   return schema.validate(obj);
 }

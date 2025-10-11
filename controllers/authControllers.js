@@ -3,6 +3,7 @@ const { User, validateRegisterUser, vlidateLoginUser, validateForgotPassword, va
 const { sendEmailToResetPassword, sendEmailToVerifyAccount } = require("../utils/mailer");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
+const { createAndSendMessageNotification } = require("../utils/firebaseNotification");
 
 /**
  * @desc Register User
@@ -15,7 +16,7 @@ module.exports.registerUserCtrl = asyncHandler(async (req, res) => {
     if (error) {
       return res.status(400).json({ message: error.details[0].message });
     }
-    const { username, email, password } = req.body;
+    const { username, email, password, fcmToken } = req.body;
   
     const userExists = await User.findOne({ email });
     if (userExists) {
@@ -28,12 +29,19 @@ module.exports.registerUserCtrl = asyncHandler(async (req, res) => {
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const verificationTokenExpire = Date.now() + 3600000; // 1 hour
 
-    let user = await User.create({ username, email, password: hashedPassword, verificationToken, verificationTokenExpire });
+    let user = await User.create({ username, email, password: hashedPassword, verificationToken, verificationTokenExpire, fcmToken });
 
     const link = `http://localhost:8000/api/users/verrify-account/${user.id}/${user.verificationToken}`;
     await sendEmailToVerifyAccount(username, email, link);
 
     user = await User.findById(user._id).select("-password -resetPasswordToken -resetPasswordExpire -verificationToken -verificationTokenExpire");
+
+    const createdForUser = user._id;
+    const title = "Welcome to TaskFlow";
+    const refType = "User";
+    const refId = user._id;
+    const body = `Hello ${user.username}, welcome to TaskFlow! We're excited to have you on board.`;
+    createAndSendMessageNotification(createdForUser, refType, refId, title, body);
 
     return res.status(200).json({user, message: 'Verification token has sent to your email, Please verify your account' });
 });
@@ -163,6 +171,13 @@ module.exports.resetPasswordCtrl = asyncHandler(async (req, res) => {
   user.resetPasswordExpire = null;
   
   await user.save();
+
+  const createdForUser = user._id;
+  const title = "Reset Password";
+  const refType = "User";
+  const refId = user._id;
+  const body = `Hello ${user.username}, you are reset your password now, don't forgot it ^_^.`;
+  createAndSendMessageNotification(createdForUser, refType, refId, title, body);
 
   return res.status(200).json({ message: "Password reset successfully" });
 });
