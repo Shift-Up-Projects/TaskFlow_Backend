@@ -22,7 +22,6 @@ status:{
     type:String,
     enum:['pending','in-progress','completed', 'not-completed'],
     default:'pending',
-    required:true,
 },
 priority:{
     type: String,
@@ -41,7 +40,10 @@ startDate:{
 },{timestamps:{
     createdAt:'created_at',
     updatedAt:'updated_at'
-}});
+},
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+});
 
 const Task=mongoose.model("Task",TaskSchema);
 
@@ -49,9 +51,7 @@ const Task=mongoose.model("Task",TaskSchema);
 function validateCreateTask(obj){
 const schema=Joi.object({
 title:Joi.string().trim().required(),
- user_id:Joi.string().required(),
 description:Joi.string().trim().min(5).required(),
-status:Joi.string().valid('pending','in-progress','completed', 'not-completed').required(),
 priority:Joi.string().valid('high', 'mid', 'low').required(),
 dueDate:Joi.date().required(),
 startDate:Joi.date().required(),
@@ -63,9 +63,7 @@ return schema.validate(obj);
 function validateUpdateTask(obj){
   const schema=Joi.object({
 title:Joi.string().trim(),
-user_id:Joi.string(),
 description:Joi.string().trim().min(5),
-status:Joi.string().valid('pending','in-progress','completed', 'not-completed'),
 priority:Joi.string().valid('high', 'mid', 'low'),
 dueDate:Joi.date(),
 startDate:Joi.date(),

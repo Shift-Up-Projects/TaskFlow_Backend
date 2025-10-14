@@ -1,5 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const { User, validateUpdateUser } = require("../models/User");
+const { Task } = require("../models/Task");
+const { Notification } = require("../models/Notification");
 
 /**
  * @desc Update User
@@ -39,6 +41,17 @@ module.exports.deleteUserCtrl = asyncHandler(async (req, res) => {
     }
 
     await User.findByIdAndDelete(id);
+    
+    const delTasks = await Task.find({ user_id: id  });
+    for(const delTask of delTasks) {
+      await Task.findByIdAndDelete(delTask._id);
+    }
+    
+    const delNotifications = await Notification.find({ createdForUser: id  });
+    for(const delNotification of delNotifications) {
+      await Notification.findByIdAndDelete(delNotification._id);
+    }
+
     return res.status(200).json({ message: "User deleted" });
 });
 
@@ -50,7 +63,10 @@ module.exports.deleteUserCtrl = asyncHandler(async (req, res) => {
  */
 module.exports.getSingleUserCtrl = asyncHandler(async (req, res) => {
     const { id } = req.user;
-    const user = await User.findById(id).select("-password -resetPasswordToken -resetPasswordExpire -verificationToken -verificationTokenExpire");
+    const user = await User.findById(id)
+    .select("-password -resetPasswordToken -resetPasswordExpire -verificationToken -verificationTokenExpire")
+    .populate('tasks')
+    .populate('notifications');
     if(!user){
       return res.status(404).json({ message: "User not found" });
     }
@@ -68,7 +84,12 @@ module.exports.getAllUsersCtrl = asyncHandler(async (req, res) => {
     const perPage = parseInt(req.query.perPage) || 10;
     const skip = (page - 1) * perPage;
     const total = await User.countDocuments();
-    const users = await User.find().skip(skip).limit(perPage).select("-password -resetPasswordToken -resetPasswordExpire -verificationToken -verificationTokenExpire");
+    const users = await User.find()
+    .skip(skip)
+    .limit(perPage)
+    .select("-password -resetPasswordToken -resetPasswordExpire -verificationToken -verificationTokenExpire")
+    .populate('tasks')
+    .populate('notifications');
     return res.status(200).json({ users, total, page, pages: Math.ceil(total / perPage) });
 });
 

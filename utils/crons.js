@@ -1,13 +1,14 @@
 const cron = require("node-cron");
 const { createAndSendMessageNotification } = require("../utils/firebaseNotification");
 const { Task } = require("../models/Task");
+const moment = require('moment-timezone');
 
 cron.schedule("*/5 * * * *", async () => { // كل 5 دقائق
-  const startTime = Date.now();
-  const currentDate = new Date();
+  const startTime = moment().tz("Asia/Damascus").toDate();
+  const currentDate = moment().tz("Asia/Damascus").toDate();
 
   try {
-    console.log(`[CRON] Task update started at ${new Date().toISOString()}`);
+    console.log(`[CRON] Task update started at ${moment().tz("Asia/Damascus").toDate().toISOString()}`);
 
     const startedTasks = await Task.find({ startDate: { $lte: currentDate }, status: 'pending' });
 
@@ -42,19 +43,21 @@ cron.schedule("*/5 * * * *", async () => { // كل 5 دقائق
         createAndSendMessageNotification(createdForUser, refType, refId, title, body);
     }
 
-    const endTime = Date.now();
+    const endTime = moment().tz("Asia/Damascus").toDate();;
     console.log(`[CRON] Task update finished in ${endTime - startTime}ms`);
   } catch (error) {
     console.error("[CRON] Error in tasks update", error);
   }
+}, {
+  timezone: "Asia/Damascus" // أو "Asia/Riyadh" حسب البلد
 });
 
 cron.schedule("0 0 * * *", async () => { // كل يوم الساعة 00:00
   const startTime = Date.now();
 
   try {
-    console.log(`[CRON] Tasks search to send alert if task end time in next day, this schedule started at ${new Date().toISOString()}`);
-    const tomorrow = new Date();
+    console.log(`[CRON] Tasks search to send alert if task end time in next day, this schedule started at ${moment().tz("Asia/Damascus").toDate().toISOString()}`);
+    const tomorrow = moment().tz("Asia/Damascus").toDate();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
 
@@ -75,9 +78,11 @@ cron.schedule("0 0 * * *", async () => { // كل يوم الساعة 00:00
         createAndSendMessageNotification(createdForUser, refType, refId, title, body);
     }
 
-    const endTime = Date.now();
+    const endTime = moment().tz("Asia/Damascus").toDate();
     console.log(`[CRON] Tasks alerts is sent in ${endTime - startTime}ms`);
   } catch (error) {
     console.error("[CRON] Error in send tasks alerts", error);
   }
+}, {
+  timezone: "Asia/Damascus"
 });

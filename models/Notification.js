@@ -15,6 +15,7 @@ const NotificationSchema = new mongoose.Schema(
     }, // نوع العنصر المرتبط
     refId: {
         type: mongoose.Schema.Types.ObjectId,
+        refPath: 'refType',
         required: true
     }, // معرف العنصر المرتبط
     title: {

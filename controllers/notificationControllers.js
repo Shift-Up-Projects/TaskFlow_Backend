@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const { Notification, validateCreateNotification, validateUpdateNotification } = require("../models/Notification");
+const { User } = require("../models/User");
 
 /**
  * @desc create notification
@@ -14,6 +15,23 @@ module.exports.createNotification = asyncHandler(async (req, res) => {
     }
 
     const { title, createdForUser, refType, refId, message } = req.body;
+
+    const user = await User.findById(createdForUser);
+    if(!user){
+        return res.status(404).json({ message: 'User not found' });
+    }
+
+    let ref;
+    if(refType === 'User') {
+        ref = await User.findById(refId);
+    }
+    if(refType === 'Task') {
+        ref = await Task.findById(refId);
+    }
+    
+    if(!ref) {
+        return res.status(404).json({ message: 'reference not found' });
+    }
 
     const notification = await Notification.create({
         title,
@@ -86,7 +104,7 @@ module.exports.getAllOrUnreadOrReadNotification = asyncHandler(async (req, res) 
     const perPage = parseInt(req.query.perPage) || 10;
     const skip = (page - 1) * perPage;
     
-    let filters;
+    let filters = {};
     filters.createdForUser = req.user.id;
     if(req.query.read) {
         filters.read = req.query.read === 'true';
@@ -102,6 +120,15 @@ module.exports.getAllOrUnreadOrReadNotification = asyncHandler(async (req, res) 
         .limit(perPage)
         .populate('refId');
 
+    await Notification.updateMany(filters,
+        {
+            $set: {
+                read: true,
+            }
+        },
+        { new: true }
+    );
+    
     return res.status(200).json({ notifications, totalUnread, page, pages: Math.ceil(totalUnread / perPage) });
 });
 

@@ -2,9 +2,10 @@ const asyncHandler = require('express-async-handler');
 const {validateCreateTask,validateUpdateTask,Task, validateUpdateTaskPriority}=require("../models/Task");
 const { User } = require('../models/User');
 const { createAndSendMessageNotification } = require('../utils/firebaseNotification');
+const { Notification } = require('../models/Notification');
 /*
 @desc Get all tasks 
-@route /api/tasks
+@route /api/tasks/:id
 @metod GET
 @access public
 */ 
@@ -12,19 +13,53 @@ const { createAndSendMessageNotification } = require('../utils/firebaseNotificat
 const getAllTasks = asyncHandler(
   //Comparison Query Operators
   async(req,res)=>{//callback func
-const tasks=await Task.find();
-  res.status(200).json(tasks);
+try {
+    // 1️⃣ استخراج الكويريات
+    const { status, priority } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // 2️⃣ بناء فلتر ديناميكي حسب الكويريات
+    const filter = {};
+    filter.user_id = req.user.id;
+    if (status) filter.status = status;
+    if (priority) filter.priority = priority;
+
+    // 3️⃣ تنفيذ الاستعلام مع الباجينيشن
+    const [tasks, total] = await Promise.all([
+      Task.find(filter)
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 }),
+      Task.countDocuments(filter)
+    ]);
+
+    // 4️⃣ الرد
+    res.status(200).json({
+      success: true,
+      total,
+      totalPages: Math.ceil(total / limit),
+      page,
+      limit,
+      hasNextPage: page * limit < total,
+      filterUsed: filter,
+      data: tasks
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 /*
 @desc Get task By Id 
-@route /api/tasks/:id
+@route /api/tasks/:id/:taskId
 @metod GET
 @access public
 */ 
 const getTaskById = asyncHandler(
   async(req,res)=>{//callback func
-  const task= await Task.findById(req.params.id);
+  const task= await Task.findById(req.params.taskId);
   if(task){
   res.status(200).json(task);
 }else{
@@ -48,16 +83,16 @@ const createTask = asyncHandler(
 
 const task= new Task({
 title:req.body.title,
-user_id :req.body.user_id,
+user_id: req.user.id,
 description:req.body.description,
-status:req.body.status,
+status: "pending",
 priority:req.body.priority,
 dueDate:req.body.dueDate,
 startDate:req.body.startDate,
 });
 const result= await task.save();
 
-  const user = await User.findById(result.user_id);
+const user = await User.findById(result.user_id);
 
   const createdForUser = user._id;
   const title = "New Task Created";
@@ -71,136 +106,112 @@ res.status(201).json(result);//201 => created successfully
 
 /*
 @desc Update New task 
-@route /api/tasks/:id
+@route /api/tasks/:id/:taskId
 @metod PUT
 @access Private (only admin )
 */ 
-const updateTask =asyncHandler(
-  async(req,res)=>{
- 
-  const {error}=validateUpdateTask(req.body);
- 
-  if(error){
-  return res.status(400).json({message: error.details[0].message});//400 error from client
-}
-const updatedTask= await Task.findByIdAndUpdate(req.params.id,{
-$set:{
-title:req.body.title,
-user_id :req.body.user_id,
-description:req.body.description,
-status:req.body.status,
-priority:req.body.priority,
-dueDate:req.body.dueDate,
-startDate:req.body.startDate,
-}
-},{new:true})
-res.status(200).json(updatedTask);
+const updateTask = asyncHandler(async (req, res) => {
+  const { title, description, priority, dueDate, startDate } = req.body;
+
+  const updatedTask = await Task.findByIdAndUpdate(
+    req.params.taskId,
+    {
+      $set: {
+        title,
+        description,
+        priority,
+        dueDate,
+        startDate
+      },
+    },
+    { new: true }
+  );
+
+  res.status(200).json(updatedTask);
 });
 
 /*
 @desc Delete New task 
-@route /api/tasks/:id
+@route /api/tasks/:id/:taskId
 @metod DELETE
 @access Private (only admin )
 */ 
 const deleteTask = asyncHandler(
   async(req,res)=>{
  
-const task=await Task.findById(req.params.id);
+const task=await Task.findById(req.params.taskId);
 if(task){
-  await Task.findByIdAndDelete(req.params.id);
+  await Task.findByIdAndDelete(req.params.taskId);
+  
+  const delNotifications = await Notification.find({ refId: req.params.taskId  });
+  for(const delNotification of delNotifications) {
+    await Notification.findByIdAndDelete(delNotification._id);
+  }
+  
   res.status(200).json({massage: "task has been deleted"});
 }else{
   res.status(404).json({massage: "task not found"});
 }
 })
 
-//NEED TO MAKE SURE THAT THE STATUS & PRIORITY ROUTES WORKS//////
-
-/*
-@desc get Tasks By Status 
-@route /api/tasks/status/:status
-@metod GET
-@access Public
-*/ 
-const getTasksByStatus = asyncHandler(
-  async(req,res)=>{
- const task = await Task.find({ status: req.params.status });
- if (task){   
-    res.status(200).json(task);
-}else {
-    res.status(500).json({ message: error.message });
-  }
-});
 
 
-/*
-@desc get Tasks By Priority 
-@route /api/tasks/priority/:priority
-@metod GET
-@access Public
-*/ 
-const getTasksByPriority = asyncHandler(
-    async (req, res) => {
-    const tasks = await Task.find({ priority: req.params.priority });
-    if (tasks){   
-    res.status(200).json(tasks);
-}else {
-    res.status(500).json({ message: error.message });
-  }
-});
+// 🔹 دالة لتحديث أولوية المهمة
+const updateTaskPriority = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { priority } = req.body;
 
-/**
- * @desc Update Task Priority
- * @route /api/tasks/priority/:id/:taskId
- * @method PUT
- * @access private (only user himself)
- */
-const updateTaskPriority = asyncHandler(async (req, res) => {
-  const { error } = validateUpdateTaskPriority(req.body);
-  if (error) {
-    return res.status(400).json({ message: error.details[0].message });
-  }
-
-  const { taskId } = req.params;
-  const { priority } = req.body;
-
-  const task = await Task.findById(taskId);
-  if (!task) {
-    return res.status(404).json({ message: "Task not found" });
-  }
-  const updatedTask = await Task.findByIdAndUpdate(taskId, {
-    $set:{
-      priority
+    if (!priority) {
+      return res.status(400).json({ message: "Priority is required" });
     }
-  }, { new: true });
-  
-  return res.status(200).json({ task: updatedTask });
-});
 
-/**
- * @desc toggle Task Status Between 'completed' and 'in-progress'
- * @route /api/tasks/toggle-status/:id/:taskId
- * @method PUT
- * @access private (only user himself)
- */
-const toggleTaskStatus = asyncHandler(async (req, res) => {
-  const { taskId } = req.params;
+    const task = await Task.findByIdAndUpdate(
+      taskId,
+      { priority },
+      { new: true }
+    );
 
-  const task = await Task.findById(taskId);
-  if (!task) {
-    return res.status(404).json({ message: "Task not found" });
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Task priority updated successfully",
+      data: task
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
+};
 
-  if(task.status === 'completed') {
-    task.status = 'in-progress';
-  } else if(task.status === 'in-progress') {
-    task.status = 'completed';
+
+// 🔹 دالة لتبديل حالة المهمة (من in-progress إلى completed أو العكس)
+const toggleTaskStatus = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const task = await Task.findById(taskId);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    if(task.status === 'pending'){
+      return res.status(400).json({ message: 'the task is pending, not allowed to toggled its status' })
+    }
+
+    // بدّل الحالة
+    task.status = task.status === "completed" ? "in-progress" : "completed";
+    await task.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Task status toggled successfully",
+      data: task,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
-  await task.save();
+};
 
-  return res.status(200).json({ task });
-});
 
 module.exports={
      getAllTasks,
@@ -208,8 +219,6 @@ module.exports={
      createTask,
      updateTask, 
      deleteTask,
-     getTasksByStatus,
-     getTasksByPriority,
      updateTaskPriority,
-     toggleTaskStatus
+     toggleTaskStatus 
 };
