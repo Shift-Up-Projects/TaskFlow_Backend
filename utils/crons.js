@@ -53,7 +53,7 @@ cron.schedule("*/5 * * * *", async () => { // كل 5 دقائق
 });
 
 cron.schedule("0 0 * * *", async () => { // كل يوم الساعة 00:00
-  const startTime = Date.now();
+  const startTime = moment().tz("Asia/Damascus").toDate();
 
   try {
     console.log(`[CRON] Tasks search to send alert if task end time in next day, this schedule started at ${moment().tz("Asia/Damascus").toDate().toISOString()}`);
