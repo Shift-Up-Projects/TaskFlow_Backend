@@ -84,9 +84,7 @@ const createTask = asyncHandler(
 const task= new Task({
 title:req.body.title,
 user_id: req.user.id,
-user_id: req.user.id,
 description:req.body.description,
-status: "pending",
 status: "pending",
 priority:req.body.priority,
 dueDate:req.body.dueDate,
@@ -157,14 +155,6 @@ if(task){
 })
 
 
-
-// 🔹 دالة لتحديث أولوية المهمة
-const updateTaskPriority = async (req, res) => {
-  try {
-    const { taskId } = req.params;
-    const { priority } = req.body;
-
-
 // 🔹 دالة لتحديث أولوية المهمة
 const updateTaskPriority = async (req, res) => {
   try {
@@ -184,20 +174,7 @@ const updateTaskPriority = async (req, res) => {
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
-    if (!priority) {
-      return res.status(400).json({ message: "Priority is required" });
-    }
-
-    const task = await Task.findByIdAndUpdate(
-      taskId,
-      { priority },
-      { new: true }
-    );
-
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
-    }
-
+    
     res.status(200).json({
       success: true,
       message: "Task priority updated successfully",
@@ -234,16 +211,6 @@ const toggleTaskStatus = async (req, res) => {
   }
 };
 
-    res.status(200).json({
-      success: true,
-      message: "Task status toggled successfully",
-      data: task,
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
 
 module.exports={
      getAllTasks,
@@ -252,6 +219,5 @@ module.exports={
      updateTask, 
      deleteTask,
      updateTaskPriority,
-     toggleTaskStatus 
      toggleTaskStatus 
 };

@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-const router = express.Router();
-
 const {
   getAllTasks,
   getTaskById,
@@ -34,13 +32,8 @@ router.route('/:id/:taskId')
 
 router.route('/priority/:id/:taskId')
   .put(validateObjectId, verifyTokenAndOnlyUser, updateTaskPriority);
-  .put(validateObjectId, verifyTokenAndOnlyUser, updateTaskPriority);
 
 router.route('/toggle-status/:id/:taskId')
-  .put(validateObjectId, verifyTokenAndOnlyUser, toggleTaskStatus);
-
-module.exports = router;
-
   .put(validateObjectId, verifyTokenAndOnlyUser, toggleTaskStatus);
 
 module.exports = router;

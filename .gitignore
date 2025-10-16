@@ -12,6 +12,3 @@ yarn-error.log
 # Build
 dist/
 build/
-
-#firebase
-config/taskflow-eefe0-firebase-adminsdk-fbsvc-345984db87.json
