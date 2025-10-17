@@ -193,7 +193,7 @@ const toggleTaskStatus = async (req, res) => {
     const task = await Task.findById(taskId);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    if(task.status === 'pending'){
+    if(task.status === 'pending' || task.status === 'not-completed'){
       return res.status(400).json({ message: 'the task is pending, not allowed to toggled its status' })
     }
 
